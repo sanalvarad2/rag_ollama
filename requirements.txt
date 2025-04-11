@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+langchain
+langchain-ollama
+langchain-community
+faiss-cpu
+pymupdf
+beautifulsoup4
+python-multipart
+qdrant-client
+python-dotenv
+pypdf
+langchain-qdrant
