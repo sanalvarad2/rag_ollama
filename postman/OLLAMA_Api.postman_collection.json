@@ -1,0 +1,73 @@
+{
+	"info": {
+		"_postman_id": "81bc7963-d53d-4ec0-8160-4b6b4c0a1a13",
+		"name": "OLLAMA_Api",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "9502070"
+	},
+	"item": [
+		{
+			"name": "CargarDoc",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "file",
+							"type": "file",
+							"src": "/E:/Usuarios/Santiago/UTN/2020/TCO/TCO 2do Parcial/Resumen TCO segundo parcial.pdf"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://localhost:8000/cargar-documento/",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"cargar-documento",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "preguntar",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "urlencoded",
+					"urlencoded": [
+						{
+							"key": "pregunta",
+							"value": "¿que es una frecuencia amortiguada?",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://127.0.0.1:8000/preguntar/",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "8000",
+					"path": [
+						"preguntar",
+						""
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
