@@ -6,6 +6,8 @@ Este documento describe los pasos necesarios para configurar un entorno virtual,
 
 - Python 3.7 o superior instalado.
 - `pip` instalado (viene con Python).
+- Qdrant instalado para la gestión de vectores. [Docker](https://qdrant.tech/documentation/quickstart/).
+- Ollama instalado para la integración con modelos de lenguaje.
 
 ## Pasos para configurar el entorno
 
