@@ -59,13 +59,13 @@ def procesar_documento(path_archivo: str, collection_name: str, extension: str, 
     return f"Documento cargado en la colección '{collection_name}' de Qdrant."
 
 def consultar_documentos(pregunta: str, collection_name: str, chatId: str):
-    conversation_history = ConversationHistory()
+    conversation_history = ConversationHistory.get_instance()
 
     history_chat = conversation_history.get_last_conversations(chatId)
     history = ""
-    for hc in history_chat:
-        history += f"User: {h['user_message']}\n"
-        history += f"Assistant: {h['ai_response']}\n"
+    for user_message, ai_response in history_chat:
+        history += f"User: {user_message}\n"
+        history += f"Assistant: {ai_response}\n"
 
     embeddings = OllamaEmbeddings(model=os.getenv("MODEL_EMBEDDING"), base_url=os.getenv("OLLAMA_URL"))
 
