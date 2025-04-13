@@ -1,6 +1,7 @@
 from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.responses import JSONResponse
 from rag_engine import procesar_documento, consultar_documentos, calcular_hash, ya_indexado
+from conversation_history import ConversationHistory
 import uuid
 import os
 from dotenv import load_dotenv
@@ -40,10 +41,17 @@ async def preguntar_a_documentos(pregunta: str = Form(...), chatId: str = Form(N
     
     if chatId is None:
         chatId = get_chat_id()
-
+    
     respuesta, fuentes = consultar_documentos(pregunta, collection_name)
+
     return JSONResponse(content={
         "respuesta": respuesta,
         "fuentes": fuentes,
         "chatId": chatId
     })
+
+@app.get("/conversations/{chatId}")
+def get_conversations(chatId: str):
+    conversation_history = ConversationHistory.get_instance()
+    conversations = conversation_history.get_last_conversations(chatId)
+    return conversations
