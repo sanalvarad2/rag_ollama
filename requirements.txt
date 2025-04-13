@@ -11,4 +11,3 @@ qdrant-client
 python-dotenv
 pypdf
 langchain-qdrant
-sqlite3

@@ -42,7 +42,7 @@ async def preguntar_a_documentos(pregunta: str = Form(...), chatId: str = Form(N
     if chatId is None:
         chatId = get_chat_id()
     
-    respuesta, fuentes = consultar_documentos(pregunta, collection_name)
+    respuesta, fuentes = consultar_documentos(pregunta, collection_name, chatId)
 
     return JSONResponse(content={
         "respuesta": respuesta,
@@ -52,6 +52,6 @@ async def preguntar_a_documentos(pregunta: str = Form(...), chatId: str = Form(N
 
 @app.get("/conversations/{chatId}")
 def get_conversations(chatId: str):
-    conversation_history = ConversationHistory.get_instance()
+    conversation_history = ConversationHistory()
     conversations = conversation_history.get_last_conversations(chatId)
     return conversations

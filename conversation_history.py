@@ -9,21 +9,12 @@ class ConversationHistory:
         return cls._instance
 
     def __init__(self, db_name="conversations.db"):
-        if not hasattr(self, 'db_name'):
+        if not hasattr(self, '_initialized'):  # Asegura que __init__ solo se ejecute una vez
+            self._initialized = True
             self.db_name = db_name
             self.conn = None
             self.cursor = None
             self.initialize_database()
-
-    @classmethod
-    def get_instance(cls):
-        return cls._instance
-
-    def __init__(self, db_name="conversations.db"):
-        self.db_name = db_name
-        self.conn = None
-        self.cursor = None
-        self.initialize_database()
 
     def connect(self):
         self.conn = sqlite3.connect(self.db_name)
@@ -63,6 +54,18 @@ class ConversationHistory:
             SELECT user_message, ai_response FROM conversations
             WHERE chatId = ?
             ORDER BY id DESC
+        """, (chat_id,))
+        rows = self.cursor.fetchall()
+        self.disconnect()
+        return rows[::-1]
+    
+    def get_last_10_conversations(self, chat_id):
+        self.connect()
+        self.cursor.execute("""
+            SELECT user_message, ai_response FROM conversations
+            WHERE chatId = ?
+            ORDER BY id DESC
+            LIMIT 10
         """, (chat_id,))
         rows = self.cursor.fetchall()
         self.disconnect()
