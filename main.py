@@ -1,9 +1,12 @@
 from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.responses import JSONResponse
 from rag_engine import procesar_documento, consultar_documentos, calcular_hash, ya_indexado
+from conversation_history import ConversationHistory
+import uuid
 import os
 from dotenv import load_dotenv
 load_dotenv() 
+
 
 
 app = FastAPI(title="RAG API con Ollama")
@@ -12,9 +15,6 @@ collection_name = "docs_rag"
 
 @app.post("/cargar-documento/")
 async def cargar_documento(file: UploadFile = File(...)):
-
-
-
     extension = os.path.splitext(file.filename)[-1].lower()
     contenido = await file.read()
     hash_archivo = calcular_hash(contenido)
@@ -32,12 +32,26 @@ async def cargar_documento(file: UploadFile = File(...)):
     resultado = procesar_documento(path_local, collection_name, extension, hash_archivo)
     return {"mensaje": resultado}
 
+@app.get("/chat-id/")
+def get_chat_id():
+    return str(uuid.uuid4())
+
 @app.post("/preguntar/")
-async def preguntar_a_documentos(pregunta: str = Form(...)):
+async def preguntar_a_documentos(pregunta: str = Form(...), chatId: str = Form(None)):
     
-    respuesta, fuentes = consultar_documentos(pregunta, collection_name)
+    if chatId is None:
+        chatId = get_chat_id()
+    
+    respuesta, fuentes = consultar_documentos(pregunta, collection_name, chatId)
+
     return JSONResponse(content={
         "respuesta": respuesta,
-        "fuentes": fuentes
+        "fuentes": fuentes,
+        "chatId": chatId
     })
- 
+
+@app.get("/conversations/{chatId}")
+def get_conversations(chatId: str):
+    conversation_history = ConversationHistory()
+    conversations = conversation_history.get_last_conversations(chatId)
+    return conversations
