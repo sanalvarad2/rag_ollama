@@ -17,6 +17,11 @@ from langGraph_state import (InputState, OutputState, OverallState,
 
 import os
 
+
+token = os.getenv("GITHUB_TOKEN")
+endpoint = "https://models.github.ai/inference"
+model_name = "openai/gpt-4o"
+
 class Chains:
     _instance = None
 
@@ -29,7 +34,7 @@ class Chains:
         if not hasattr(self, '_initialized'):  # Asegura que __init__ solo se ejecute una vez
             self._initialized = True
             self.embedding = OpenAIEmbeddings(model=os.getenv("MODEL_EMBEDDING"), base_url=os.getenv("OLLAMA_URL"))
-            self.llm = ChatOpenAI(model="gpt-4o")
+            self.llm = ChatOpenAI(model=model_name, base_url=endpoint, api_key=token)
 
     def getRationalChain(self):
         """

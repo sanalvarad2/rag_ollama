@@ -10,6 +10,11 @@ from hashlib import md5
 from typing import Dict, List
 
 from langchain_ollama import OllamaEmbeddings
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+
+token = os.environ["GITHUB_TOKEN"]
+endpoint = "https://models.github.ai/inference"
+model_name = "openai/gpt-4o"
 
 class Neo4jEngine:
     _instance = None    
@@ -22,7 +27,7 @@ class Neo4jEngine:
     def __init__(self):
         if not hasattr(self, '_initialized'):  # Asegura que __init__ solo se ejecute una vez
             self._initialized = True
-            self.embedding = OllamaEmbeddings(model=os.getenv("MODEL_EMBEDDING"), base_url=os.getenv("OLLAMA_URL"))
+            self.embedding = OpenAIEmbeddings()
             self.graph = Neo4jGraph(refresh_schema=False, 
                 url=os.getenv("NEO4J_URI"),
                 username=os.getenv("NEO4J_USERNAME"),
