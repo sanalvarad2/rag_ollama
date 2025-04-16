@@ -19,3 +19,4 @@ tiktoken
 wikipedia
 langchain-neo4j
 openai
+langgraph

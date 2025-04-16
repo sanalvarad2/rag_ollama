@@ -1,4 +1,4 @@
-from langchain_community.graphs import Neo4jGraph
+from langchain_neo4j import Neo4jGraph, Neo4jVector
 
 from pydantic import BaseModel, Field
 
@@ -8,6 +8,8 @@ import os
 from datetime import datetime
 from hashlib import md5
 from typing import Dict, List
+
+from langchain_ollama import OllamaEmbeddings
 
 class Neo4jEngine:
     _instance = None    
@@ -20,13 +22,46 @@ class Neo4jEngine:
     def __init__(self):
         if not hasattr(self, '_initialized'):  # Asegura que __init__ solo se ejecute una vez
             self._initialized = True
-            self.graph = Neo4jGraph(refresh_schema=False)
+            self.embedding = OllamaEmbeddings(model=os.getenv("MODEL_EMBEDDING"), base_url=os.getenv("OLLAMA_URL"))
+            self.graph = Neo4jGraph(refresh_schema=False, 
+                url=os.getenv("NEO4J_URI"),
+                username=os.getenv("NEO4J_USERNAME"),
+                password=os.getenv("NEO4J_PASSWORD"),
+            )
+            
             self.initialize_database()
 
     def initialize_database(self):
         self.graph.query("CREATE CONSTRAINT IF NOT EXISTS FOR (c:Chunk) REQUIRE c.id IS UNIQUE")
         self.graph.query("CREATE CONSTRAINT IF NOT EXISTS FOR (c:AtomicFact) REQUIRE c.id IS UNIQUE")
-        self.graph.query("CREATE CONSTRAINT IF NOT EXISTS FOR (c:KeyElement) REQUIRE c.id IS UNIQUE")        
+        self.graph.query("CREATE CONSTRAINT IF NOT EXISTS FOR (c:KeyElement) REQUIRE c.id IS UNIQUE")     
+
+    # neo4j_vector = Neo4jVector.from_existing_graph(
+    # url=os.getenv("NEO4J_URI"),
+    # username=os.getenv("NEO4J_USERNAME"),
+    # password=os.getenv("NEO4J_PASSWORD"),
+    # embedding=embeddings,
+    # index_name="keyelements",
+    # node_label="KeyElement",
+    # text_node_properties=["id"],
+    # embedding_node_property="embedding",
+    # retrieval_query="RETURN node.id AS text, score, {} AS metadata"
+    #)
+    def getVector(self):
+        """
+        This method returns a Neo4jGraph object with the specified parameters.
+        """
+        return Neo4jVector.from_existing_graph(
+            url=os.getenv("NEO4J_URI"),
+            username=os.getenv("NEO4J_USERNAME"),
+            password=os.getenv("NEO4J_PASSWORD"),
+            embedding=self.embedding,
+            index_name="keyelements",
+            node_label="KeyElement",
+            text_node_properties=["id"],
+            embedding_node_property="embedding",
+            retrieval_query="RETURN node.id AS text, score, {} AS metadata"
+        )
 
     import_query = """
     MERGE (d:Document {id:$document_name})
@@ -48,7 +83,10 @@ class Neo4jEngine:
     MERGE (a)-[:HAS_KEY_ELEMENT]->(k)
     """ 
 
-    def encode_md5(text):
+    def encode_md5(self, text):
+        print(f"Encoding text: {text}")
+        if not isinstance(text, str):
+            raise ValueError("Input must be a string")
         return md5(text.encode("utf-8")).hexdigest()
     
     def insert_data(self, data: List[Dict], document_name: str):
@@ -64,6 +102,50 @@ class Neo4jEngine:
             MERGE (start)-[:NEXT]->(end)
             """,
            params={"document_name":document_name})
+        
+    def get_atomic_facts(self, key_elements: List[str]) -> List[Dict[str, str]]:
+        data = self.graph.query("""
+        MATCH (k:KeyElement)<-[:HAS_KEY_ELEMENT]-(fact)<-[:HAS_ATOMIC_FACT]-(chunk)
+        WHERE k.id IN $key_elements
+        RETURN distinct chunk.id AS chunk_id, fact.text AS text
+        """, params={"key_elements": key_elements})
+        return data
+
+    def get_neighbors_by_key_element(self, key_elements):
+        print(f"Key elements: {key_elements}")
+        data = self.graph.query("""
+        MATCH (k:KeyElement)<-[:HAS_KEY_ELEMENT]-()-[:HAS_KEY_ELEMENT]->(neighbor)
+        WHERE k.id IN $key_elements AND NOT neighbor.id IN $key_elements
+        WITH neighbor, count(*) AS count
+        ORDER BY count DESC LIMIT 50
+        RETURN collect(neighbor.id) AS possible_candidates
+        """, params={"key_elements":key_elements})
+        return data
+    
+
+    def get_subsequent_chunk_id(self, chunk):
+        data = self.graph.query("""
+        MATCH (c:Chunk)-[:NEXT]->(next)
+        WHERE c.id = $id
+        RETURN next.id AS next
+        """)
+        return data
+
+    def get_previous_chunk_id(self, chunk):
+        data = self.graph.query("""
+        MATCH (c:Chunk)<-[:NEXT]-(previous)
+        WHERE c.id = $id
+        RETURN previous.id AS previous
+        """)
+        return data
+
+    def get_chunk(self, chunk_id: str) -> List[Dict[str, str]]:
+        data = self.graph.query("""
+        MATCH (c:Chunk)
+        WHERE c.id = $chunk_id
+        RETURN c.id AS chunk_id, c.text AS text
+        """, params={"chunk_id": chunk_id})
+        return data
 
 
 

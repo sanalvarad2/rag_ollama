@@ -1,6 +1,6 @@
 from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.responses import JSONResponse
-from rag_engine import consultar_documentos, calcular_hash, ya_indexado
+from rag_engine import RagEngine
 from document_processor import DocumentProcessor
 from conversation_history import ConversationHistory
 import uuid
@@ -18,7 +18,7 @@ collection_name = "docs_rag"
 async def cargar_documento(file: UploadFile = File(...)):
     extension = os.path.splitext(file.filename)[-1].lower()
     contenido = await file.read()
-    hash_archivo = calcular_hash(contenido)
+    hash_archivo = RagEngine().calcular_hash(contenido)
     print(f"Hash del archivo: {hash_archivo}")
     # if ya_indexado(hash_archivo, collection_name):
     #     return {"mensaje": "Este archivo ya fue indexado"}
@@ -43,11 +43,10 @@ async def preguntar_a_documentos(pregunta: str = Form(...), chatId: str = Form(N
     if chatId is None:
         chatId = get_chat_id()
     
-    respuesta, fuentes = consultar_documentos(pregunta, collection_name, chatId)
+    respuesta = RagEngine().consultar_documentos(pregunta, collection_name, chatId)
 
     return JSONResponse(content={
         "respuesta": respuesta,
-        "fuentes": fuentes,
         "chatId": chatId
     })
 

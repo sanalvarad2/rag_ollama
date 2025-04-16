@@ -1,5 +1,5 @@
 from langchain_community.document_loaders import PyPDFLoader, BSHTMLLoader
-from langchain.text_splitter import TokenTextSplitter
+from langchain.text_splitter import TokenTextSplitter, RecursiveCharacterTextSplitter
 from langchain_core.prompts import ChatPromptTemplate
 from neo4j_engine import Neo4jEngine, Extraction
 
@@ -13,7 +13,8 @@ from typing import Dict, List
 # import pandas as pd
 # import seaborn as sns
 import tiktoken
-from langchain_community.graphs import Neo4jGraph
+
+from langchain_neo4j import Neo4jGraph
 from langchain_community.tools import WikipediaQueryRun
 from langchain_community.utilities import WikipediaAPIWrapper
 from langchain_core.prompts import ChatPromptTemplate
@@ -74,11 +75,11 @@ class DocumentProcessor:
         if not hasattr(self, '_initialized'):  # Asegura que __init__ solo se ejecute una vez
             self._initialized = True
             self.neo4j = Neo4jEngine()
-            self.model = ChatOllama(model="llama3.2:3b", temperature=0.1)   
+            self.model = ChatOllama(model="llama3.2:3b", temperature=0.1, base_url="http://localhost:11434")   
             self.structured_llm = self.model.with_structured_output(Extraction)
             self.extraction_chain = self.construction_prompt | self.structured_llm
-            self.splitter = TokenTextSplitter(chunk_size=500, chunk_overlap=100)
-            self.checkAzure()
+            self.splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
+            # self.checkAzure()
 
     def checkAzure(self):
         res = self.model.invoke("Hello, how can I assist you today?")
@@ -107,7 +108,7 @@ class DocumentProcessor:
 
         # 2. Procesar cada chunk
         tasks = [
-            asyncio.create_task(self.extraction_chain.ainvoke({"input":chunk_text}))
+            asyncio.create_task(self.extraction_chain.ainvoke({"input":chunk_text.page_content}))
             for index, chunk_text in enumerate(chunks)
         ]
 
@@ -116,8 +117,11 @@ class DocumentProcessor:
 
         docs = [el.dict() for el in results]
         for index, doc in enumerate(docs):
-            doc['chunk_id'] = self.neo4j.encode_md5(chunks[index])
-            doc['chunk_text'] = chunks[index]
+            # print(f"Chunk {index}: {chunks[index]}")
+            page_content = chunks[index].page_content
+            # print(f"Page {index}: {page_content}")
+            doc['chunk_id'] = self.neo4j.encode_md5(page_content)
+            doc['chunk_text'] = page_content
             doc['index'] = index
             for af in doc["atomic_facts"]:
                 af["id"] = self.neo4j.encode_md5(af["atomic_fact"])
