@@ -11,3 +11,11 @@ qdrant-client
 python-dotenv
 pypdf
 langchain-qdrant
+neo4j
+langchain-core
+langchain-openai
+langchain-text-splitters
+tiktoken
+wikipedia
+langchain-neo4j
+openai

@@ -55,3 +55,6 @@ La aplicación estará disponible en `http://127.0.0.1:8000`.
 
 - Usa `deactivate` para salir del entorno virtual.
 - Asegúrate de que el archivo `requirements.txt` esté actualizado con las dependencias necesarias.
+
+
+docker run --restart always --publish=7474:7474 --publish=7687:7687 --env NEO4J_AUTH=neo4j/appleipod --volume=D:\Docker\neo4j\data:/data --volume=D:\Docker\neo4j\plugins:/plugins --env NEO4J_PLUGINS=\[\"apoc\"\] -e NEO4J_apoc_export_file_enabled=true -e NEO4J_apoc_import_file_enabled=true -e NEO4J_apoc_import_file_use__neo4j__config=true -d neo4j:2025.03.0
