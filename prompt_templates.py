@@ -138,6 +138,10 @@ following elements:
 facts derived from different text chunks.
 You have now explored multiple paths from various starting nodes on this graph, recording key information for each path in a notebook.
 Your task now is to analyze these memories and reason to answer the question.
+Requirements:
+#####
+1. Ensure that the answer are presented in the same language as
+    the original question (e.g., English or Chinese).
 Strategy:
 #####
 1. You should first analyze each notebook content before providing a final answer.

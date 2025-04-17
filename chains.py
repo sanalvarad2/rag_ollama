@@ -19,8 +19,11 @@ import os
 
 
 token = os.getenv("GITHUB_TOKEN")
-endpoint = "https://models.github.ai/inference"
-model_name = "openai/gpt-4o"
+# endpoint = "https://models.github.ai/inference"
+endpoint = "http://localhost:11434/v1/"
+
+model_name = "cogito:8b"
+api_version = "2025-01-01-preview"
 
 class Chains:
     _instance = None
@@ -33,8 +36,14 @@ class Chains:
     def __init__(self):
         if not hasattr(self, '_initialized'):  # Asegura que __init__ solo se ejecute una vez
             self._initialized = True
-            self.embedding = OpenAIEmbeddings(model=os.getenv("MODEL_EMBEDDING"), base_url=os.getenv("OLLAMA_URL"))
-            self.llm = ChatOpenAI(model=model_name, base_url=endpoint, api_key=token)
+            self.embedding = OllamaEmbeddings(model="nomic-embed-text:latest", base_url=os.getenv("OLLAMA_URL"))
+            self.llm = ChatOpenAI(
+                                    # or your api version
+                                    model=model_name,
+                                    base_url=endpoint,
+                                    api_key=token,
+                                    # or your endpoint
+                                )
 
     def getRationalChain(self):
         """

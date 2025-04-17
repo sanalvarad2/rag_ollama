@@ -28,8 +28,9 @@ initial_node_prompt = ChatPromptTemplate.from_messages(
             "human",
             (
                 """Question: {question}
-Plan: {rational_plan}
-Nodes: {nodes}"""
+                   Plan: {rational_plan}
+                   Nodes: {nodes}
+                """
             ),
         ),
     ]
