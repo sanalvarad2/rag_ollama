@@ -130,19 +130,21 @@ class Neo4jEngine:
     
 
     def get_subsequent_chunk_id(self, chunk):
+        print(f"Next Chunk From: {chunk}")
         data = self.graph.query("""
         MATCH (c:Chunk)-[:NEXT]->(next)
         WHERE c.id = $id
         RETURN next.id AS next
-        """)
+        """, params={"id": chunk})
         return data
 
     def get_previous_chunk_id(self, chunk):
+        print(f"Previous Chunk from: {chunk}")
         data = self.graph.query("""
         MATCH (c:Chunk)<-[:NEXT]-(previous)
         WHERE c.id = $id
         RETURN previous.id AS previous
-        """)
+        """, params={"id": chunk})
         return data
 
     def get_chunk(self, chunk_id: str) -> List[Dict[str, str]]:
