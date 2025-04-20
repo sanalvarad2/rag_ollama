@@ -16,9 +16,9 @@ from langchain_core.messages import ToolMessage
 from langchain_core.messages import HumanMessage, AIMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.types import Command
-from langgraph.prebuilt import ToolNode
+from langgraph.prebuilt import ToolNode, InjectedState
 
-from typing_extensions import Any, Annotated
+from typing_extensions import Any, Annotated, Optional
 
 
 class LangGraphEngine:
@@ -49,13 +49,16 @@ class LangGraphEngine:
         langgraph.add_edge("rational_plan_node", "initial_node_selection")
         langgraph.add_edge("initial_node_selection", "atomic_fact_check")
         langgraph.add_edge("tools", "atomic_fact_check")
+        langgraph.add_edge("tools", "chunk_check")
+        langgraph.add_edge("tools", "neighbor_select")
+        langgraph.add_edge("tools", "answer_reasoning")
         langgraph.add_conditional_edges(
             "atomic_fact_check",
             self.should_continue,
         )
         langgraph.add_conditional_edges(
             "chunk_check",
-            self.chunk_condition,
+            self.should_continue,
         )
         langgraph.add_conditional_edges(
             "neighbor_select",
@@ -186,7 +189,7 @@ class LangGraphEngine:
         print(f"Step: read chunk({chunk_id})")
 
         chunks_text = self.neo4j_graph.get_chunk(chunk_id)
-        read_chunk_results = self.chains.getChunkReadChain().invoke(
+        read_chunk_results = self.chains.getChunkReadChain([self.read_subsequent_chunk, self.read_previous_chunk, self.search_more, self.termination]).invoke(
             {
                 "question": state.get("question"),
                 "rational_plan": state.get("rational_plan"),
@@ -195,37 +198,21 @@ class LangGraphEngine:
                 "chunk": chunks_text,
             }
         )
-
-        notebook = read_chunk_results.updated_notebook
-        print(
-            f"Rational for next action after reading chunks: {read_chunk_results.rational_next_move}"
-        )
-        chosen_action = self.parse_function(read_chunk_results.chosen_action)
-        print(f"Chosen action: {chosen_action}")
+        notebook = state.get("notebook"),
+        if not read_chunk_results.tool_calls:
+            notebook = read_chunk_results.content
+        # print(
+        #     f"Rational for next action after reading chunks: {read_chunk_results.rational_next_move}"
+        # )
+        #chosen_action = self.parse_function(read_chunk_results.chosen_action)
+        # print(f"Chosen action: {chosen_action}")
         response = {
             "notebook": notebook,
-            "chosen_action": chosen_action.get("function_name"),
+            #"chosen_action": chosen_action.get("function_name"),
             "previous_actions": [f"read_chunks({chunk_id})"],
+            "check_chunks_queue": check_chunks_queue,
+            "messages": [read_chunk_results]
         }
-        if chosen_action.get("function_name") == "read_subsequent_chunk":
-            subsequent_id = self.neo4j_graph.get_subsequent_chunk_id(chunk_id)
-            check_chunks_queue.append(subsequent_id)
-        elif chosen_action.get("function_name") == "read_previous_chunk":
-            previous_id = self.neo4j_graph.get_previous_chunk_id(chunk_id)
-            check_chunks_queue.append(previous_id)
-        elif chosen_action.get("function_name") == "search_more":
-            # Go over to next chunk
-            # Else explore neighbors
-            if not check_chunks_queue:
-                response["chosen_action"] = "search_neighbor"
-                # Get neighbors/use vector similarity
-                print(f"Neighbor rational: {read_chunk_results.rational_next_move}")
-                neighbors = self.get_potential_nodes(
-                    read_chunk_results.rational_next_move
-                )
-                response["neighbor_check_queue"] = neighbors
-
-        response["check_chunks_queue"] = check_chunks_queue
         return response
     
     def neighbor_select(self, state: OverallState) -> OverallState:
@@ -272,15 +259,6 @@ class LangGraphEngine:
             "previous_actions": ["answer_reasoning"],
         }
     
-    def atomic_fact_condition(
-            self,
-            state: OverallState,
-        ) -> Literal["neighbor_select", "chunk_check"]:
-        if state.get("chosen_action") == "stop_and_read_neighbor":
-            return "neighbor_select"
-        elif state.get("chosen_action") == "read_chunk":
-            return "chunk_check"
-
     def chunk_condition(
             self,
             state: OverallState,
@@ -312,13 +290,13 @@ class LangGraphEngine:
     def tool_node(self, state: OverallState) -> OverallState:
         # This method is used to call the tool node in the graph
         # It will be called by the graph engine when needed
-        tools = [self.stop_and_read_neighbor, self.read_chunk]
+        tools = [self.stop_and_read_neighbor, self.read_chunk, self.read_subsequent_chunk, self.read_previous_chunk, self.search_more, self.termination]
         return ToolNode(
             tools=tools,
         )
 
     @tool
-    def stop_and_read_neighbor(key_elements: List[str], tool_call_id: Annotated[str, InjectedToolCallId], config: RunnableConfig) -> List[str]:
+    def stop_and_read_neighbor(key_elements: List[str], tool_call_id: Annotated[str, InjectedToolCallId]) -> List[str]:
         """
         Use this tool to find and read the neighbors of the key elements.
         """
@@ -341,7 +319,7 @@ class LangGraphEngine:
         )
          
     @tool
-    def read_chunk(chunks:List[str], tool_call_id: Annotated[str, InjectedToolCallId], config: RunnableConfig):
+    def read_chunk(chunks:List[str], tool_call_id: Annotated[str, InjectedToolCallId]):
         """
         Use this tool to read a chunk of text.
         """
@@ -361,3 +339,108 @@ class LangGraphEngine:
             goto="chunk_check"
         )
        
+    @tool
+    def read_subsequent_chunk(chunk_id: str, tool_call_id: Annotated[str, InjectedToolCallId], state: Annotated[OverallState, InjectedState]):
+        """
+        Use this tool to read a subsequent chunk of text.
+        Example: read_subsequent_chunk('c9e314c10d8b517e92d492aa0d584500')
+        """
+        print(f"Chunk: {chunk_id}")
+
+        subsequent_id = Neo4jEngine().get_subsequent_chunk_id(chunk_id)
+        check_chunks_queue = state.get("check_chunks_queue")
+        check_chunks_queue.append(subsequent_id)
+        
+        return Command(
+            update={
+            # update the state keys
+            "check_chunks_queue": check_chunks_queue,
+            # update the message history
+            "messages": [
+                ToolMessage(
+                    "Successfully load subsequent chunk to read", tool_call_id=tool_call_id
+                )
+            ],
+            },
+            goto="chunk_check"
+        )
+    
+    @tool
+    def read_previous_chunk(chunk_id: str, tool_call_id: Annotated[str, InjectedToolCallId], state: Annotated[OverallState, InjectedState]):
+        """
+        Use this tool to read a previous chunk of text.
+        Example: read_previous_chunk('c9e314c10d8b517e92d492aa0d584500')
+        """
+        print(f"Chunk: {chunk_id}")
+
+        # previous_id = self.neo4j_graph.get_previous_chunk_id(chunk_id)
+        #     check_chunks_queue.append(previous_id)
+
+        previous_id = Neo4jEngine().get_previous_chunk_id(chunk_id)
+        check_chunks_queue = state.get("check_chunks_queue")
+        check_chunks_queue.append(previous_id)
+
+
+        
+        return Command(
+            update={
+            # update the state keys
+            "check_chunks_queue": check_chunks_queue,
+            # update the message history
+            "messages": [
+                ToolMessage(
+                    "Successfully load previous chunk to read", tool_call_id=tool_call_id
+                )
+            ],
+            },
+            goto="chunk_check"
+        )
+    
+    @tool
+    def search_more(tool_call_id: Annotated[str, InjectedToolCallId], state: Annotated[OverallState, InjectedState], similarityConcepts: Optional[str] = None):
+        """
+        Use this tool to search for more information using vector similarity or read nexts chunks in check_chunks_queue.
+        Example: 
+            search_more(similarityConcepts = 'imputados') si 'check_chunks_queue' esta vacio
+            search_more(similarityConcepts = None) si 'check_chunks_queue' no esta vacio
+        """
+
+        goto = "chunk_check"
+        check_chunks_queue = state.get("check_chunks_queue")
+        neighbors = state.get("neighbor_check_queue")
+        if not check_chunks_queue:
+            goto = "neighbor_select"
+            data = Neo4jEngine().getVector().similarity_search(similarityConcepts, k=50)
+            neighbors = [el.page_content for el in data]
+        return Command(
+            update={
+            # update the state keys
+            "neighbor_check_queue": neighbors,
+            # update the message history
+            "messages": [
+                ToolMessage(
+                    "Successfully load more information", tool_call_id=tool_call_id
+                )
+            ],
+            },
+            goto=goto
+        )
+    
+    @tool
+    def termination(tool_call_id: Annotated[str, InjectedToolCallId]):
+        """
+        Use this tool to terminate the process and get a response.
+        """
+        return Command(
+            update={
+            # update the state keys
+            "check_chunks_queue": [],
+            # update the message history
+            "messages": [
+                ToolMessage(
+                    "Successfully terminated the process", tool_call_id=tool_call_id
+                )
+            ],
+            },
+            goto="answer_reasoning"
+        )

@@ -86,7 +86,7 @@ class Chains:
         """
         # Define the chunk read chain using the chunk read prompt, LLM, and string output parser
         llm_with_tools:BaseChatModel = self.llm.bind_tools(tools)
-        chunk_read_chain = chunk_read_prompt | llm_with_tools.with_structured_output(ChunkOutput)
+        chunk_read_chain = chunk_read_prompt | llm_with_tools
         return chunk_read_chain
     
     #neighbor_select_chain = neighbor_select_prompt | llm.with_structured_output(NeighborOutput)

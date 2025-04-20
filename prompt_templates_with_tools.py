@@ -115,7 +115,7 @@ following elements:
 facts derived from different text chunks.
 Your current task is to assess a specific text chunk and determine whether the available information
 suffices to answer the question. Given the question, rational plan, previous actions, notebook
-content, and the current text chunk, you have the following Action Options:
+content, and the current text chunk, you have the following Tools Options:
 #####
 1. search_more(): Choose this action if you think that the essential information necessary to
 answer the question is still lacking.
@@ -132,7 +132,13 @@ Strategy:
 1. Reflect on previous actions and prevent redundant revisiting of nodes or chunks.
 2. You can only choose one action.
 #####
-Please strictly follow the above format. Let’s begin
+####
+RETURN Policies:
+####
+combine your current notebook with new insights and findings about
+the question from current atomic facts, creating a more complete version of the notebook that
+contains more valid information.
+####
 """
 
 neighbor_select_system_prompt = """
