@@ -11,7 +11,8 @@ from prompts_with_tools import (
     answer_reasoning_prompt,
     atomic_fact_check_prompt,
     chunk_read_prompt,
-    neighbor_select_prompt
+    neighbor_select_prompt,
+    retrieval_prompt
 )
 
 from langGraph_state import (InputState, OutputState, OverallState,
@@ -48,15 +49,25 @@ class Chains:
                                     # or your endpoint
                                 )
 
-    def getRationalChain(self, tools: list[Tool]= []):
+    def getRationalChain(self):
         """
         This method returns the rational chain, which is a combination of the rational prompt,
         the language model (LLM), and the string output parser.
         """
         # Define the rational chain using the rational prompt, LLM, and string output parser
         
-        rational_chain = rational_prompt | self.llm | StrOutputParser()
+        rational_chain = rational_prompt | self.llm
         return rational_chain
+    
+    def getNodeRetrivalChain(self, tools: list[Tool]= []):
+        """
+        This method returns the node retrieval chain, which is a combination of the node retrieval prompt,
+        the language model (LLM), and the string output parser.
+        """
+        # Define the node retrieval chain using the node retrieval prompt, LLM, and string output parser
+        llm_with_tools:BaseChatModel = self.llm.bind_tools(tools)
+        node_retrieval_chain = retrieval_prompt | llm_with_tools
+        return node_retrieval_chain
     
     def getAtomicFactChain(self, tools: list[Tool]= []):
         """

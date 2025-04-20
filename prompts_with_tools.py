@@ -1,6 +1,7 @@
-from prompt_templates_with_tools import rational_plan_system, initial_node_system, atomic_fact_check_system, chunk_read_system_prompt, neighbor_select_system_prompt, answer_reasoning_system_prompt
+from prompt_templates_with_tools import rational_plan_system, retrieval_system, initial_node_system, atomic_fact_check_system, chunk_read_system_prompt, neighbor_select_system_prompt, answer_reasoning_system_prompt
 
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.messages import SystemMessage
 
 
 rational_prompt = ChatPromptTemplate.from_messages(
@@ -18,6 +19,11 @@ rational_prompt = ChatPromptTemplate.from_messages(
     ]
 )
 
+
+retrieval_prompt = ChatPromptTemplate.from_messages(
+    [SystemMessage(content=retrieval_system)])
+  
+
 initial_node_prompt = ChatPromptTemplate.from_messages(
     [
         (
@@ -28,7 +34,6 @@ initial_node_prompt = ChatPromptTemplate.from_messages(
             "human",
             (
                 """Question: {question}
-                   Plan: {rational_plan}
                    Nodes: {nodes}
                 """
             ),
