@@ -15,6 +15,8 @@ from prompts_with_tools import (
     retrieval_prompt
 )
 
+from langgraph.prebuilt import create_react_agent
+
 from langGraph_state import (InputState, OutputState, OverallState,
                             InitialNodes, AtomicFactOutput, ChunkOutput,
                             NeighborOutput, AnswerReasonOutput)
@@ -22,12 +24,17 @@ from langGraph_state import (InputState, OutputState, OverallState,
 import os
 
 
-token = os.getenv("GITHUB_TOKEN")
-# endpoint = "https://models.github.ai/inference"
-endpoint = "http://localhost:11434/v1/"
 
-model_name = "llama3.1:8b"
+token = os.getenv("GITHUB_TOKEN")
+endpoint = "https://models.github.ai/inference"
+# endpoint = "http://localhost:11434/v1/"
+
+# model_name = "qwen2.5:14b"
+model_name = "openai/o3"
 api_version = "2025-01-01-preview"
+
+print("Token: ", token)
+print("Endpoint: ", endpoint)
 
 class Chains:
     _instance = None
@@ -46,6 +53,7 @@ class Chains:
                                     model=model_name,
                                     base_url=endpoint,
                                     api_key=token,
+                                    
                                     # or your endpoint
                                 )
 
@@ -64,6 +72,8 @@ class Chains:
         This method returns the node retrieval chain, which is a combination of the node retrieval prompt,
         the language model (LLM), and the string output parser.
         """
+
+        # graph = create_react_agent(model=self.llm, tools=tools, prompt=retrieval_prompt)
         # Define the node retrieval chain using the node retrieval prompt, LLM, and string output parser
         llm_with_tools:BaseChatModel = self.llm.bind_tools(tools)
         node_retrieval_chain = retrieval_prompt | llm_with_tools
@@ -87,7 +97,7 @@ class Chains:
         """
         # Define the initial node chain using the initial node prompt, LLM, and string output parser
         llm_with_tools:BaseChatModel = self.llm.bind_tools(tools)
-        initial_nodes_chain = initial_node_prompt | llm_with_tools.with_structured_output(InitialNodes, include_raw=True)
+        initial_nodes_chain = initial_node_prompt | llm_with_tools.with_structured_output(InitialNodes)
         return initial_nodes_chain
     
     def getChunkReadChain(self, tools: list[Tool]= []):

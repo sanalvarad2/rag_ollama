@@ -14,15 +14,8 @@ class OutputState(TypedDict):
     analysis: str
     previous_actions: List[str]
 
-class OverallState(MessagesState):
-    question: str
-    rational_plan: str
-    notebook: str
-    previous_actions: Annotated[List[str], add]
-    check_atomic_facts_queue: List[str]
-    check_chunks_queue: List[str]
-    neighbor_check_queue: List[str]
-    chosen_action: str
+class OverallState(MessagesState):    
+    notebook: str    
 
 class Node(BaseModel):
     key_element: str = Field(description="""Key element or name of a relevant node""")

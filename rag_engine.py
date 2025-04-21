@@ -1,5 +1,6 @@
 import hashlib
 from langgraph_engine_with_tools import LangGraphEngine
+from langchain_core.messages import HumanMessage
 
 class RagEngine:
     _instance = None
@@ -20,7 +21,7 @@ class RagEngine:
 
     def consultar_documentos(self, pregunta: str, collection_name: str, chatId: str):
 
-        resultado = self.langgraph.getLangGraph().invoke({"question": pregunta})
+        resultado = self.langgraph.getLangGraph().invoke({"messages": [("human", pregunta)]})
 
         return resultado
 
