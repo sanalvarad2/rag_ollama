@@ -18,12 +18,31 @@ from langchain_neo4j import Neo4jGraph
 from langchain_community.tools import WikipediaQueryRun
 from langchain_community.utilities import WikipediaAPIWrapper
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_openai import ChatOpenAI
+from langchain_openai import AzureChatOpenAI
 from langchain_text_splitters import TokenTextSplitter
 from pydantic import BaseModel, Field
 
-from langchain_openai import AzureChatOpenAI
+from langchain_openai import ChatOpenAI
 from langchain_ollama import ChatOllama
+from langchain_core.rate_limiters import InMemoryRateLimiter
+
+token = "As9NrwFfeF77NhtWgn8B1q0PW1BYinlbCt4vs1vtIawNtPm852BOJQQJ99BDACHYHv6XJ3w3AAAAACOGaLHv"
+endpoint = "https://salva-m9r0afxw-eastus2.cognitiveservices.azure.com/"
+# endpoint = "http://localhost:11434/v1/"
+
+# model_name = "qwen2.5:14b"
+model_name = "o4-mini"
+deployment = "o4-mini"
+
+api_version ="2024-12-01-preview"
+
+
+rate_limiter = InMemoryRateLimiter(
+    requests_per_second=1,  # <-- Super slow! We can only make a request once every 10 seconds!!
+    check_every_n_seconds=0.1,  # Wake up every 100 ms to check whether allowed to make a request,
+    max_bucket_size=700,  # Controls the maximum burst size.
+)
+
 
 class DocumentProcessor:
     _instance = None
@@ -75,10 +94,10 @@ class DocumentProcessor:
         if not hasattr(self, '_initialized'):  # Asegura que __init__ solo se ejecute una vez
             self._initialized = True
             self.neo4j = Neo4jEngine()
-            self.model = ChatOllama(model="llama3.2:3b", temperature=0.1, base_url="http://localhost:11434")   
+            self.model = AzureChatOpenAI(model=model_name, azure_endpoint=endpoint, api_key=token, api_version=api_version, deployment_name=deployment, rate_limiter=rate_limiter)   
             self.structured_llm = self.model.with_structured_output(Extraction)
             self.extraction_chain = self.construction_prompt | self.structured_llm
-            self.splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
+            self.splitter = TokenTextSplitter(chunk_size=500, chunk_overlap=100)
             # self.checkAzure()
 
     def checkAzure(self):

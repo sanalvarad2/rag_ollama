@@ -1,5 +1,5 @@
 from langchain_ollama import OllamaEmbeddings, ChatOllama
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings, AzureChatOpenAI
 from langchain_core.output_parsers import StrOutputParser
 
 from prompts import (
@@ -18,12 +18,15 @@ from langGraph_state import (InputState, OutputState, OverallState,
 import os
 
 
-token = os.getenv("GITHUB_TOKEN")
-# endpoint = "https://models.github.ai/inference"
-endpoint = "http://localhost:11434/v1/"
+token = "As9NrwFfeF77NhtWgn8B1q0PW1BYinlbCt4vs1vtIawNtPm852BOJQQJ99BDACHYHv6XJ3w3AAAAACOGaLHv"
+endpoint = "https://salva-m9r0afxw-eastus2.cognitiveservices.azure.com/"
+# endpoint = "http://localhost:11434/v1/"
 
-model_name = "cogito:8b"
-api_version = "2025-01-01-preview"
+# model_name = "qwen2.5:14b"
+model_name = "gpt-4.1-mini"
+deployment = "gpt-4.1-mini"
+
+api_version ="2024-12-01-preview"
 
 class Chains:
     _instance = None
@@ -37,13 +40,7 @@ class Chains:
         if not hasattr(self, '_initialized'):  # Asegura que __init__ solo se ejecute una vez
             self._initialized = True
             self.embedding = OllamaEmbeddings(model="nomic-embed-text:latest", base_url=os.getenv("OLLAMA_URL"))
-            self.llm = ChatOpenAI(
-                                    # or your api version
-                                    model=model_name,
-                                    base_url=endpoint,
-                                    api_key=token,
-                                    # or your endpoint
-                                )
+            self.llm = AzureChatOpenAI(model=model_name, azure_endpoint=endpoint, api_key=token, api_version=api_version, deployment_name=deployment)
 
     def getRationalChain(self):
         """

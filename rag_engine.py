@@ -1,5 +1,5 @@
 import hashlib
-from langgraph_engine_with_tools import LangGraphEngine
+from langgraph_engine import LangGraphEngine
 from langchain_core.messages import HumanMessage
 
 class RagEngine:
@@ -21,7 +21,7 @@ class RagEngine:
 
     def consultar_documentos(self, pregunta: str, collection_name: str, chatId: str):
 
-        resultado = self.langgraph.getLangGraph().invoke({"messages": [("human", pregunta)]})
+        resultado = self.langgraph.getLangGraph().invoke({"question": pregunta})
 
         return resultado
 
@@ -43,5 +43,5 @@ class RagEngine:
     #     print(f"Ya existe: {len(results[0]) > 0}")
     #     return len(results[0]) > 0
 
-    def calcular_hash(archivo_bytes: bytes) -> str:
+    def calcular_hash(self, archivo_bytes: bytes) -> str:
         return hashlib.sha256(archivo_bytes).hexdigest()

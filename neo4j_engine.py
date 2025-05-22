@@ -10,7 +10,7 @@ from hashlib import md5
 from typing import Dict, List
 
 from langchain_ollama import OllamaEmbeddings
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings, AzureOpenAIEmbeddings
 
 token = os.getenv("OPENAI_API_KEY")
 # endpoint = "https://models.github.ai/inference"
@@ -28,7 +28,7 @@ class Neo4jEngine:
     def __init__(self):
         if not hasattr(self, '_initialized'):  # Asegura que __init__ solo se ejecute una vez
             self._initialized = True
-            self.embedding = OllamaEmbeddings(model="nomic-embed-text:latest", base_url=os.getenv("OLLAMA_URL"))
+            self.embedding = OllamaEmbeddings(model="nomic-embed-text:latest", base_url="http://localhost:11434")
             self.graph = Neo4jGraph(refresh_schema=False, 
                 url=os.getenv("NEO4J_URI"),
                 username=os.getenv("NEO4J_USERNAME"),
@@ -57,14 +57,12 @@ class Neo4jEngine:
         """
         This method returns a Neo4jGraph object with the specified parameters.
         """
-        return Neo4jVector(
-            url=os.getenv("NEO4J_URI"),
-            username=os.getenv("NEO4J_USERNAME"),
-            password=os.getenv("NEO4J_PASSWORD"),
+        return Neo4jVector.from_existing_graph(
+            graph=self.graph,
             embedding=self.embedding,
             index_name="keyelements",
             node_label="KeyElement",
-            text_node_property="id",
+            text_node_properties=["id"],
             embedding_node_property="embedding",
             retrieval_query="RETURN node.id AS text, score, {} AS metadata"
         )
